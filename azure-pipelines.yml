@@ -1,0 +1,36 @@
+trigger:
+- main
+
+variables:
+  azureServiceConnection: 'Sua-Conexao-Azure'
+  resourceGroup: 'rg-alomundo-dev'
+  acrName: 'devopslabalomundoapi'
+  imageName: 'flask-api'
+
+stages:
+- stage: Build
+  jobs:
+  - job: BuildDocker
+    steps:
+    - task: Docker@2
+      displayName: 'Build e Push para o ACR'
+      inputs:
+        containerRegistry: '$(azureServiceConnection)'
+        repository: '$(imageName)'
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'
+        tags: 'latest'
+
+- stage: Deploy
+  dependsOn: Build
+  jobs:
+  - job: TerraformApply
+    steps:
+    - task: TerraformInstaller@0
+      inputs:
+        terraformVersion: 'latest'
+
+    - script: |
+        terraform init
+        terraform apply -auto-approve
+      displayName: 'Terraform Init e Apply'
